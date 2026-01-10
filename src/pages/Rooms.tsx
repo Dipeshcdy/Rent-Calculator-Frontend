@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../lib/axios.ts';
 import { Plus, User, Wifi, Trash2, Zap, CreditCard } from 'lucide-react';
-import { getCurrentBSDate, convertADToBS, formatBSDate, getNepaliMonthName, formatBSMonthYear } from '../lib/dateUtils';
+import { getCurrentBSDate, convertADToBS, formatBSDate, formatBSMonthYear } from '../lib/dateUtils';
 
 interface Room {
     id: string;
