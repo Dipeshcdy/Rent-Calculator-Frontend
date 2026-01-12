@@ -1,14 +1,15 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import Layout from './components/Layout.tsx';
-import Login from './pages/Login.tsx';
-import Dashboard from './pages/Dashboard.tsx';
-import Rooms from './pages/Rooms.tsx';
-import Settings from './pages/Settings.tsx';
-import Tenants from './pages/Tenants.tsx';
-import Readings from './pages/Readings.tsx';
-import WorkLogs from './pages/WorkLogs.tsx';
-import BillingHistory from './pages/BillingHistory.tsx';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Rooms from './pages/Rooms';
+import Settings from './pages/Settings';
+import Tenants from './pages/Tenants';
+import Readings from './pages/Readings';
+import WorkLogs from './pages/WorkLogs';
+import BillingHistory from './pages/BillingHistory';
 
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {

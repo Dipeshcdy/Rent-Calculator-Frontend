@@ -1,26 +1,66 @@
-import { useEffect, useState } from 'react';
-import api from '../lib/axios.ts';
+import React, { useEffect, useState } from 'react';
+import api from '../lib/axios';
 import { Plus, User, Wifi, Trash2, Zap, CreditCard } from 'lucide-react';
 import { getCurrentBSDate, convertADToBS, formatBSDate, formatBSMonthYear } from '../lib/dateUtils';
+
+interface Tenant {
+    id: string;
+    name: string;
+    deviceCount: number;
+    dueDay: number;
+}
+
+interface Reading {
+    id: string;
+    units: number;
+    month: number;
+    year: number;
+}
+
+interface PaymentLog {
+    id: string;
+    amount: number;
+    paymentType: string;
+    remarks: string;
+    createdAt: string;
+}
+
+interface Bill {
+    id: string;
+    roomId: string;
+    month: number;
+    year: number;
+    totalAmount: number;
+    paidAmount: number;
+    isPaid: boolean;
+    rentAmount: number;
+    electricityAmount: number;
+    waterAmount: number;
+    wasteAmount: number;
+    internetAmount: number;
+    serviceCharge: number;
+    arrears: number;
+    paymentLogs?: PaymentLog[];
+}
 
 interface Room {
     id: string;
     name: string;
     baseRent: number;
     nextBillingDate?: string;
-    tenants: any[];
-    readings?: any[];
-    bills?: any[];
+    tenants: Tenant[];
+    readings?: Reading[];
+    bills?: Bill[];
 }
 
 const Rooms = () => {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [newRoom, setNewRoom] = useState({ name: '', baseRent: '' });
+    const [newRoom, setNewRoom] = useState<{ name: string; baseRent: string }>({ name: '', baseRent: '' });
 
     // Payment State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [selectedBill, setSelectedBill] = useState<any>(null);
+    const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentRemarks, setPaymentRemarks] = useState('');
     const [paymentType, setPaymentType] = useState('CASH');
@@ -28,7 +68,7 @@ const Rooms = () => {
 
     // History State
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-    const [roomHistory, setRoomHistory] = useState<any[]>([]);
+    const [roomHistory, setRoomHistory] = useState<Bill[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [selectedRoomName, setSelectedRoomName] = useState('');
 
@@ -36,13 +76,13 @@ const Rooms = () => {
     const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
     const [isEditTenantModalOpen, setIsEditTenantModalOpen] = useState(false);
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-    const [selectedTenant, setSelectedTenant] = useState<any>(null);
+    const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
     const [newTenantName, setNewTenantName] = useState('');
     const [newTenantDueDay, setNewTenantDueDay] = useState(new Date().getDate().toString());
     const [isExistingTenant, setIsExistingTenant] = useState(false);
     const [editTenantForm, setEditTenantForm] = useState({ name: '', deviceCount: '', dueDay: '' });
     const [isEditBillModalOpen, setIsEditBillModalOpen] = useState(false);
-    const [selectedBillToEdit, setSelectedBillToEdit] = useState<any>(null);
+    const [selectedBillToEdit, setSelectedBillToEdit] = useState<Bill | null>(null);
     const [editBillForm, setEditBillForm] = useState({
         rentAmount: '',
         internetAmount: '',
@@ -120,7 +160,7 @@ const Rooms = () => {
         }
     };
 
-    const openEditTenantModal = (tenant: any) => {
+    const openEditTenantModal = (tenant: Tenant) => {
         setSelectedTenant(tenant);
         setEditTenantForm({
             name: tenant.name || '',
@@ -174,7 +214,7 @@ const Rooms = () => {
         }
     };
 
-    const openEditBillModal = (bill: any) => {
+    const openEditBillModal = (bill: Bill) => {
         setSelectedBillToEdit(bill);
         setEditBillForm({
             rentAmount: bill.rentAmount.toString(),
@@ -200,7 +240,7 @@ const Rooms = () => {
             });
 
             // Update local history state if open
-            setRoomHistory(prev => prev.map(b => b.id === updatedBill.id ? updatedBill : b));
+            setRoomHistory((prev: Bill[]) => prev.map((b: Bill) => b.id === updatedBill.id ? updatedBill : b));
             setIsEditBillModalOpen(false);
             setSelectedBillToEdit(null);
             fetchRooms(); // Refresh main UI
@@ -225,18 +265,18 @@ const Rooms = () => {
         }
     };
 
-    const openPaymentModal = (bill: any) => {
+    const openPaymentModal = (bill: Bill) => {
         setSelectedBill(bill);
         setPaymentAmount((bill.totalAmount - bill.paidAmount).toString());
         setIsPaymentModalOpen(true);
     };
 
-    const getNextDueDate = (dueDay: any) => {
+    const getNextDueDate = (dueDay: number | string) => {
         const { day, month, year } = getCurrentBSDate();
         let targetMonth = month;
         let targetYear = year;
 
-        if (parseInt(dueDay) <= day) {
+        if ((typeof dueDay === 'string' ? parseInt(dueDay) : dueDay) <= day) {
             targetMonth += 1;
             if (targetMonth > 12) {
                 targetMonth = 1;
@@ -249,18 +289,18 @@ const Rooms = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Rooms</h2>
-                    <p className="text-gray-500">Manage rooms and tenants</p>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Rooms</h2>
+                    <p className="text-gray-500 text-sm">Manage rooms and tenants</p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="btn-primary flex items-center gap-2">
+                <button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto btn-primary flex items-center justify-center gap-2">
                     <Plus className="w-5 h-5" /> Add Room
                 </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.map((room) => (
+                {rooms.map((room: Room) => (
                     <div key={room.id} className="card hover:shadow-md transition-shadow relative group">
                         <button
                             onClick={() => handleDeleteRoom(room.id)}
@@ -315,7 +355,7 @@ const Rooms = () => {
                             {room.tenants.length === 0 ? (
                                 <p className="text-gray-400 text-sm italic">No tenants assigned</p>
                             ) : (
-                                room.tenants.map(tenant => (
+                                room.tenants.map((tenant: Tenant) => (
                                     <div key={tenant.id} className="flex flex-col bg-gray-50 p-3 rounded-lg border border-gray-100">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
@@ -409,8 +449,8 @@ const Rooms = () => {
                                         type="number"
                                         className="input-field"
                                         value={paymentAmount}
-                                        onFocus={(e) => e.target.select()}
-                                        onChange={e => setPaymentAmount(e.target.value)}
+                                        onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPaymentAmount(e.target.value)}
                                         required
                                         autoFocus
                                     />
@@ -577,7 +617,7 @@ const Rooms = () => {
                                         max="32"
                                         className="input-field"
                                         value={editTenantForm.dueDay}
-                                        onChange={e => setEditTenantForm({ ...editTenantForm, dueDay: e.target.value })}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditTenantForm({ ...editTenantForm, dueDay: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -622,7 +662,7 @@ const Rooms = () => {
                         ) : (
                             <div className="flex-1 overflow-y-auto pr-2">
                                 <div className="space-y-6">
-                                    {roomHistory.map((bill: any) => (
+                                    {roomHistory.map((bill: Bill) => (
                                         <div key={bill.id} className="border rounded-lg p-4 bg-gray-50">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div>
@@ -673,7 +713,7 @@ const Rooms = () => {
                                                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Logs</div>
                                                 {bill.paymentLogs && bill.paymentLogs.length > 0 ? (
                                                     <div className="divide-y divide-gray-200">
-                                                        {bill.paymentLogs.map((log: any) => (
+                                                        {bill.paymentLogs.map((log: PaymentLog) => (
                                                             <div key={log.id} className="py-2 flex justify-between items-start">
                                                                 <div>
                                                                     <div className="flex items-center gap-2">
@@ -726,7 +766,7 @@ const Rooms = () => {
                                     type="number"
                                     className="input-field"
                                     value={editBillForm.rentAmount}
-                                    onChange={e => setEditBillForm({ ...editBillForm, rentAmount: e.target.value })}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBillForm({ ...editBillForm, rentAmount: e.target.value })}
                                     required
                                 />
                             </div>
@@ -737,7 +777,7 @@ const Rooms = () => {
                                         type="number"
                                         className="input-field"
                                         value={editBillForm.internetAmount}
-                                        onChange={e => setEditBillForm({ ...editBillForm, internetAmount: e.target.value })}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBillForm({ ...editBillForm, internetAmount: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -747,7 +787,7 @@ const Rooms = () => {
                                         type="number"
                                         className="input-field"
                                         value={editBillForm.electricityAmount}
-                                        onChange={e => setEditBillForm({ ...editBillForm, electricityAmount: e.target.value })}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBillForm({ ...editBillForm, electricityAmount: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -759,7 +799,7 @@ const Rooms = () => {
                                         type="number"
                                         className="input-field"
                                         value={editBillForm.serviceCharge}
-                                        onChange={e => setEditBillForm({ ...editBillForm, serviceCharge: e.target.value })}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBillForm({ ...editBillForm, serviceCharge: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -769,7 +809,7 @@ const Rooms = () => {
                                         type="number"
                                         className="input-field"
                                         value={editBillForm.arrears}
-                                        onChange={e => setEditBillForm({ ...editBillForm, arrears: e.target.value })}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBillForm({ ...editBillForm, arrears: e.target.value })}
                                         required
                                     />
                                 </div>

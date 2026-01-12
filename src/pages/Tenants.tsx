@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
-import api from '../lib/axios.ts';
+import api from '../lib/axios';
 import { User, Trash2 } from 'lucide-react';
 
+interface Tenant {
+    id: string;
+    name: string;
+    roomName: string;
+    deviceCount: number;
+}
+
 const Tenants = () => {
-    const [tenants, setTenants] = useState<any[]>([]);
+    const [tenants, setTenants] = useState<Tenant[]>([]);
 
     useEffect(() => {
         fetchTenants();
@@ -23,7 +30,7 @@ const Tenants = () => {
         if (count < 0) return;
 
         // Optimistic update
-        setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, deviceCount: count } : t));
+        setTenants(prev => prev.map((t: Tenant) => t.id === tenantId ? { ...t, deviceCount: count } : t));
 
         try {
             await api.patch(`/rooms/tenants/${tenantId}`, { deviceCount: count });
@@ -46,12 +53,12 @@ const Tenants = () => {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-3xl font-bold text-gray-900">Tenants</h2>
-                <p className="text-gray-500">Manage tenants and their devices</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Tenants</h2>
+                <p className="text-gray-500 text-sm">Manage tenants and their devices</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {tenants.map((tenant) => (
+                {tenants.map((tenant: Tenant) => (
                     <div key={tenant.id} className="card flex items-start justify-between">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
@@ -60,7 +67,7 @@ const Tenants = () => {
                             </div>
                             <p className="text-sm text-gray-500 mb-4">Room: {tenant.roomName}</p>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                                 <div className="text-sm font-medium text-gray-500">Number of Devices:</div>
                                 <div className="flex items-center border rounded-lg overflow-hidden">
                                     <button

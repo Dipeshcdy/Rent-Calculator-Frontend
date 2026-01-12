@@ -1,10 +1,29 @@
-import { useEffect, useState } from 'react';
-import api from '../lib/axios.ts';
+import React, { useEffect, useState } from 'react';
+import api from '../lib/axios';
 import { Zap, CheckCircle, AlertCircle } from 'lucide-react';
 import { getCurrentBSDate, getNepaliMonthName, getBSYearOptions, formatBSMonthYear } from '../lib/dateUtils';
 
+interface Reading {
+    id: string;
+    units: number;
+    month: number;
+    year: number;
+    roomId: string;
+}
+
+interface RoomReadingStatus {
+    id: string;
+    name: string;
+    reading?: Reading;
+    previousReading?: Reading;
+}
+
+interface CompletedRoom extends RoomReadingStatus {
+    reading: Reading;
+}
+
 const Readings = () => {
-    const [rooms, setRooms] = useState<any[]>([]);
+    const [rooms, setRooms] = useState<RoomReadingStatus[]>([]);
     const [readings, setReadings] = useState<{ [key: string]: string }>({});
     const [submitting, setSubmitting] = useState<{ [key: string]: boolean }>({});
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -46,7 +65,7 @@ const Readings = () => {
 
             setMessage({ type: 'success', text: 'Reading recorded successfully!' });
 
-            setRooms(prev => prev.map(r => {
+            setRooms(prev => prev.map((r: RoomReadingStatus) => {
                 if (r.id === roomId) {
                     return { ...r, reading: newReading };
                 }
@@ -69,18 +88,19 @@ const Readings = () => {
     };
 
     const pendingRooms = rooms.filter(r => !r.reading);
-    const completedRooms = rooms.filter(r => r.reading);
+    const completedRooms = rooms.filter((r): r is CompletedRoom => !!r.reading);
 
     const [editingReadingId, setEditingReadingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState('');
 
-    const handleEditStart = (readingOrRoomId: any, isNew: boolean = false) => {
+    const handleEditStart = (readingOrRoomId: Reading | string, isNew: boolean = false) => {
         if (isNew) {
             setEditingReadingId(`new-prev-${readingOrRoomId}`);
             setEditValue('0');
         } else {
-            setEditingReadingId(readingOrRoomId.id);
-            setEditValue(readingOrRoomId.units.toString());
+            const reading = readingOrRoomId as Reading;
+            setEditingReadingId(reading.id);
+            setEditValue(reading.units.toString());
         }
     };
 
@@ -101,7 +121,7 @@ const Readings = () => {
                 });
                 updatedReading = data;
 
-                setRooms(prev => prev.map(room => {
+                setRooms((prev: RoomReadingStatus[]) => prev.map((room: RoomReadingStatus) => {
                     if (room.id === roomId) {
                         return { ...room, previousReading: updatedReading };
                     }
@@ -113,7 +133,7 @@ const Readings = () => {
                 });
                 updatedReading = data;
 
-                setRooms(prev => prev.map(room => {
+                setRooms((prev: RoomReadingStatus[]) => prev.map((room: RoomReadingStatus) => {
                     if (room.reading && room.reading.id === readingIdOrNew) {
                         return { ...room, reading: updatedReading };
                     }
@@ -155,17 +175,17 @@ const Readings = () => {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Record Readings</h2>
-                    <p className="text-gray-500">Electricity meter readings for {formatBSMonthYear(month, year)}</p>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Record Readings</h2>
+                    <p className="text-gray-500 text-sm">Electricity meter readings for {formatBSMonthYear(month, year)}</p>
                 </div>
                 {pendingRooms.length === 0 && rooms.length > 0 && (
                     <button
                         type="button"
                         onClick={handleGenerateBills}
                         disabled={isGenerating}
-                        className="btn-primary bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2"
+                        className="w-full sm:w-auto btn-primary bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2"
                     >
                         <CheckCircle className="w-5 h-5" />
                         {isGenerating ? 'Generating...' : 'Generate Monthly Bills'}
@@ -173,29 +193,33 @@ const Readings = () => {
                 )}
             </div>
 
-            <div className="flex gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm items-center overflow-x-auto">
-                <Zap className="w-5 h-5 text-indigo-600 flex-shrink-0" />
-                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest mr-2 whitespace-nowrap">Select Period:</span>
-                <select
-                    className="input-field max-w-[150px]"
-                    value={month}
-                    onChange={(e) => setMonth(parseInt(e.target.value))}
-                >
-                    {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                            {getNepaliMonthName(i + 1)}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    className="input-field max-w-[120px]"
-                    value={year}
-                    onChange={(e) => setYear(parseInt(e.target.value))}
-                >
-                    {getBSYearOptions().map(y => (
-                        <option key={y} value={y}>{y}</option>
-                    ))}
-                </select>
+            <div className="flex flex-col sm:flex-row gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm items-start sm:items-center">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Zap className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">Select Period:</span>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <select
+                        className="input-field flex-1 sm:max-w-[150px]"
+                        value={month}
+                        onChange={(e) => setMonth(parseInt(e.target.value))}
+                    >
+                        {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                                {getNepaliMonthName(i + 1)}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        className="input-field flex-1 sm:max-w-[120px]"
+                        value={year}
+                        onChange={(e) => setYear(parseInt(e.target.value))}
+                    >
+                        {getBSYearOptions().map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {message && (
@@ -219,7 +243,7 @@ const Readings = () => {
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
-                            {pendingRooms.map(room => (
+                            {pendingRooms.map((room: RoomReadingStatus) => (
                                 <div key={room.id} className="py-4">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex flex-col">
@@ -232,7 +256,7 @@ const Readings = () => {
                                                         <input
                                                             type="number"
                                                             value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
                                                             className="w-16 bg-white border rounded text-[11px] px-1 font-mono outline-none focus:ring-1 focus:ring-indigo-500"
                                                             autoFocus
                                                         />
@@ -261,7 +285,7 @@ const Readings = () => {
                                                 className="input-field pl-9 w-full"
                                                 placeholder="Enter Current Units"
                                                 value={readings[room.id] || ''}
-                                                onChange={(e) => handleReadingChange(room.id, e.target.value)}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleReadingChange(room.id, e.target.value)}
                                             />
                                         </div>
                                         <button
@@ -292,91 +316,178 @@ const Readings = () => {
                     {completedRooms.length === 0 ? (
                         <p className="text-gray-400 italic text-center py-8">No readings recorded yet.</p>
                     ) : (
-                        <div className="overflow-x-auto rounded-lg border border-gray-100">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 text-gray-500 font-medium whitespace-nowrap">
-                                    <tr>
-                                        <th className="px-4 py-3">Room</th>
-                                        <th className="px-4 py-3 text-right">Prev</th>
-                                        <th className="px-4 py-3 text-right">Current</th>
-                                        <th className="px-4 py-3 text-right">Usage</th>
-                                        <th className="px-4 py-3 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {completedRooms.map(room => (
-                                        <tr key={room.id} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-gray-900">{room.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-500 font-mono">
-                                                {editingReadingId === (room.previousReading?.id || `new-prev-${room.id}`) ? (
-                                                    <input
-                                                        type="number"
-                                                        value={editValue}
-                                                        autoFocus
-                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                        className="w-20 px-2 py-1 border rounded text-right focus:ring-1 focus:ring-indigo-500 outline-none"
-                                                    />
-                                                ) : (
-                                                    <span>{room.previousReading?.units || 0}</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-bold text-gray-900 font-mono">
-                                                {editingReadingId === room.reading.id ? (
-                                                    <input
-                                                        type="number"
-                                                        value={editValue}
-                                                        autoFocus
-                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                        className="w-20 px-2 py-1 border rounded text-right focus:ring-1 focus:ring-indigo-500 outline-none"
-                                                    />
-                                                ) : (
-                                                    room.reading.units
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-indigo-600 font-black font-mono">
+                        <div>
+                            {/* Mobile View: Cards */}
+                            <div className="md:hidden space-y-4">
+                                {completedRooms.map((room: CompletedRoom) => (
+                                    <div key={room.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="font-bold text-gray-900">{room.name}</span>
+                                            <span className="text-indigo-600 font-black font-mono">
                                                 {(room.reading.units - (room.previousReading?.units || 0)).toFixed(2)}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                {(editingReadingId === room.reading.id || editingReadingId === (room.previousReading?.id || `new-prev-${room.id}`)) ? (
-                                                    <div className="flex justify-end gap-2 text-xs">
-                                                        <button
-                                                            onClick={() => handleEditSave(editingReadingId!)}
-                                                            className="text-green-600 font-bold hover:bg-green-50 px-2 py-1 rounded border border-green-100"
-                                                        >
-                                                            SAVE
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setEditingReadingId(null)}
-                                                            className="text-red-500 font-bold hover:bg-red-50 px-2 py-1 rounded border border-red-100"
-                                                        >
-                                                            CANCEL
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-end gap-1">
-                                                        <button
-                                                            onClick={() => handleEditStart(room.reading)}
-                                                            className="text-indigo-600 hover:text-indigo-800 font-bold text-[10px] uppercase border border-indigo-200 px-2 py-1 rounded bg-indigo-50 whitespace-nowrap"
-                                                        >
-                                                            Edit Current
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEditStart(room.previousReading || room.id, !room.previousReading)}
-                                                            className="text-gray-500 hover:text-gray-700 font-bold text-[10px] uppercase border border-gray-200 px-2 py-1 rounded bg-gray-50 whitespace-nowrap"
-                                                        >
-                                                            {room.previousReading ? 'Edit Previous' : 'Set Previous'}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
+                                                <span className="text-[10px] ml-1 uppercase">Units</span>
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <span className="text-[10px] text-gray-500 uppercase block">Previous</span>
+                                                <div className="font-mono text-gray-700">
+                                                    {editingReadingId === (room.previousReading?.id || `new-prev-${room.id}`) ? (
+                                                        <input
+                                                            type="number"
+                                                            value={editValue}
+                                                            autoFocus
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+                                                            className="w-full px-2 py-1 border rounded focus:ring-1 focus:ring-indigo-500 outline-none"
+                                                        />
+                                                    ) : (
+                                                        room.previousReading?.units || 0
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] text-gray-500 uppercase block">Current</span>
+                                                <div className="font-mono font-bold text-gray-900">
+                                                    {editingReadingId === room.reading.id ? (
+                                                        <input
+                                                            type="number"
+                                                            value={editValue}
+                                                            autoFocus
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+                                                            className="w-full px-2 py-1 border rounded focus:ring-1 focus:ring-indigo-500 outline-none"
+                                                        />
+                                                    ) : (
+                                                        room.reading.units
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
+                                            {(editingReadingId === room.reading.id || editingReadingId === (room.previousReading?.id || `new-prev-${room.id}`)) ? (
+                                                <div className="flex gap-2 w-full">
+                                                    <button
+                                                        onClick={() => handleEditSave(editingReadingId!)}
+                                                        className="flex-1 text-green-600 font-bold hover:bg-green-100 py-2 rounded border border-green-200 bg-white"
+                                                    >
+                                                        SAVE
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingReadingId(null)}
+                                                        className="flex-1 text-red-500 font-bold hover:bg-red-100 py-2 rounded border border-red-200 bg-white"
+                                                    >
+                                                        CANCEL
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEditStart(room.reading!)}
+                                                        className="flex-1 text-indigo-600 hover:text-indigo-800 font-bold text-[10px] uppercase border border-indigo-200 px-3 py-2 rounded bg-white whitespace-nowrap"
+                                                    >
+                                                        Edit Current
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEditStart(room.previousReading || room.id, !room.previousReading)}
+                                                        className="flex-1 text-gray-500 hover:text-gray-700 font-bold text-[10px] uppercase border border-gray-200 px-3 py-2 rounded bg-white whitespace-nowrap"
+                                                    >
+                                                        {room.previousReading ? 'Edit Previous' : 'Set Previous'}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop View: Table */}
+                            <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-100">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 text-gray-500 font-medium whitespace-nowrap">
+                                        <tr>
+                                            <th className="px-4 py-3">Room</th>
+                                            <th className="px-4 py-3 text-right">Prev</th>
+                                            <th className="px-4 py-3 text-right">Current</th>
+                                            <th className="px-4 py-3 text-right">Usage</th>
+                                            <th className="px-4 py-3 text-right">Action</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {completedRooms.map((room: CompletedRoom) => (
+                                            <tr key={room.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-gray-900">{room.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-gray-500 font-mono">
+                                                    {editingReadingId === (room.previousReading?.id || `new-prev-${room.id}`) ? (
+                                                        <input
+                                                            type="number"
+                                                            value={editValue}
+                                                            autoFocus
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+                                                            className="w-20 px-2 py-1 border rounded text-right focus:ring-1 focus:ring-indigo-500 outline-none"
+                                                        />
+                                                    ) : (
+                                                        <span>{room.previousReading?.units || 0}</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-bold text-gray-900 font-mono">
+                                                    {editingReadingId === room.reading.id ? (
+                                                        <input
+                                                            type="number"
+                                                            value={editValue}
+                                                            autoFocus
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditValue(e.target.value)}
+                                                            className="w-20 px-2 py-1 border rounded text-right focus:ring-1 focus:ring-indigo-500 outline-none"
+                                                        />
+                                                    ) : (
+                                                        room.reading.units
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-indigo-600 font-black font-mono">
+                                                    {(room.reading.units - (room.previousReading?.units || 0)).toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    {(editingReadingId === room.reading.id || editingReadingId === (room.previousReading?.id || `new-prev-${room.id}`)) ? (
+                                                        <div className="flex justify-end gap-2 text-xs">
+                                                            <button
+                                                                onClick={() => handleEditSave(editingReadingId!)}
+                                                                className="text-green-600 font-bold hover:bg-green-50 px-2 py-1 rounded border border-green-100"
+                                                            >
+                                                                SAVE
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingReadingId(null)}
+                                                                className="text-red-500 font-bold hover:bg-red-50 px-2 py-1 rounded border border-red-100"
+                                                            >
+                                                                CANCEL
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <button
+                                                                onClick={() => handleEditStart(room.reading)}
+                                                                className="text-indigo-600 hover:text-indigo-800 font-bold text-[10px] uppercase border border-indigo-200 px-2 py-1 rounded bg-indigo-50 whitespace-nowrap"
+                                                            >
+                                                                Edit Current
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleEditStart(room.previousReading || room.id, !room.previousReading)}
+                                                                className="text-gray-500 hover:text-gray-700 font-bold text-[10px] uppercase border border-gray-200 px-2 py-1 rounded bg-gray-50 whitespace-nowrap"
+                                                            >
+                                                                {room.previousReading ? 'Edit Previous' : 'Set Previous'}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                 </div>

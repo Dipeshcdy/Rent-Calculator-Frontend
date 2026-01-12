@@ -1,10 +1,26 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/axios.ts';
+import api from '../lib/axios';
 import { Home, Users, Zap, DollarSign, AlertCircle } from 'lucide-react';
 import { getCurrentBSDate } from '../lib/dateUtils';
 
-const StatCard = ({ icon: Icon, label, value, color }: any) => (
+interface DashboardStats {
+    totalRooms: number;
+    totalTenants: number;
+    pendingBills: number;
+    overdueAutomation: number;
+    revenue: number;
+    totalArrears: number;
+}
+
+interface StatCardProps {
+    icon: React.ElementType;
+    label: string;
+    value: string | number;
+    color: string;
+}
+
+const StatCard = ({ icon: Icon, label, value, color }: StatCardProps) => (
     <div className="card flex items-center justify-between">
         <div>
             <p className="text-gray-500 text-sm font-medium">{label}</p>
@@ -18,7 +34,7 @@ const StatCard = ({ icon: Icon, label, value, color }: any) => (
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState({
+    const [stats, setStats] = useState<DashboardStats>({
         totalRooms: 0,
         totalTenants: 0,
         pendingBills: 0,
@@ -60,9 +76,9 @@ const Dashboard = () => {
     return (
         <div className="space-y-6">
             {(pendingReadingsCount > 0 || stats.overdueAutomation > 0) && (
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg flex justify-between items-center shadow-sm">
+                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 rounded-full">
+                        <div className="p-2 bg-amber-100 rounded-full shrink-0">
                             <Zap className="w-5 h-5 text-amber-600" />
                         </div>
                         <div>
@@ -77,7 +93,7 @@ const Dashboard = () => {
                     </div>
                     <button
                         onClick={() => navigate('/readings')}
-                        className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm"
+                        className="w-full sm:w-auto px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm whitespace-nowrap"
                     >
                         Record Now
                     </button>

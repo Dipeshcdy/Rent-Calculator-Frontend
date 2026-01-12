@@ -1,20 +1,27 @@
 
-
+import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Home, Users, Settings, LogOut, Zap, Briefcase, History } from 'lucide-react';
-import { useAuth } from '../context/AuthContext.tsx';
+import { LayoutDashboard, Home, Users, Settings, LogOut, Zap, Briefcase, History, Menu, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
+
+interface NavItem {
+    icon: React.ElementType;
+    label: string;
+    path: string;
+}
 
 const Sidebar = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
-    const navItems = [
+    const navItems: NavItem[] = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: Home, label: 'Rooms', path: '/rooms' },
         { icon: Users, label: 'Tenants', path: '/tenants' },
@@ -25,19 +32,52 @@ const Sidebar = () => {
     ];
 
     return (
-        <div className="flex h-screen bg-gray-50">
-            <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
-                <div className="p-6">
+        <div className="flex h-screen bg-gray-50 flex-col md:flex-row overflow-hidden">
+            {/* Mobile Header */}
+            <header className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0">
+                <h1 className="text-xl font-bold text-primary flex items-center gap-2">
+                    <Home className="w-6 h-6" /> RentCalc
+                </h1>
+                <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+            </header>
+
+            {/* Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside className={clsx(
+                "fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col shrink-0",
+                isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
+                <div className="p-6 hidden md:block">
                     <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                         <Home className="w-8 h-8" /> RentCalc
                     </h1>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-2">
-                    {navItems.map((item) => (
+                {/* Mobile Sidebar Header */}
+                <div className="p-6 md:hidden border-b border-gray-100 mb-2">
+                    <h1 className="text-xl font-bold text-primary flex items-center gap-2">
+                        <Home className="w-6 h-6" /> RentCalc
+                    </h1>
+                </div>
+
+                <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
+                    {navItems.map((item: NavItem) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
+                            onClick={() => setIsMobileMenuOpen(false)}
                             className={({ isActive }) =>
                                 clsx(
                                     'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
@@ -64,7 +104,7 @@ const Sidebar = () => {
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-auto p-8">
+            <main className="flex-1 overflow-auto p-4 md:p-8">
                 <Outlet />
             </main>
         </div>

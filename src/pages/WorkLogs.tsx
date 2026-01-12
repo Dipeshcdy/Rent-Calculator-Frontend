@@ -1,12 +1,34 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../lib/axios';
 import clsx from 'clsx';
 import { Briefcase, Calendar, Home, Plus, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { getCurrentBSDate, getNepaliMonthName, getBSYearOptions, formatBSMonthYear, formatBSDate, convertADToBS } from '../lib/dateUtils';
 
+interface Room {
+    id: string;
+    name: string;
+}
+
+interface Bill {
+    id: string;
+    month: number;
+    year: number;
+    totalAmount: number;
+    paidAmount: number;
+    room: Room;
+}
+
+interface WorkLog {
+    id: string;
+    remarks: string;
+    amount: number;
+    createdAt: string;
+    bill: Bill;
+}
+
 const WorkLogs = () => {
-    const [logs, setLogs] = useState<any[]>([]);
-    const [rooms, setRooms] = useState<any[]>([]);
+    const [logs, setLogs] = useState<WorkLog[]>([]);
+    const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filter State
@@ -18,7 +40,7 @@ const WorkLogs = () => {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRoomId, setSelectedRoomId] = useState('');
-    const [activeBill, setActiveBill] = useState<any>(null);
+    const [activeBill, setActiveBill] = useState<Bill | null>(null);
     const [workAmount, setWorkAmount] = useState('');
     const [workDescription, setWorkDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -139,7 +161,7 @@ const WorkLogs = () => {
                 <select
                     className="input-field max-w-[150px]"
                     value={filterMonth}
-                    onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterMonth(parseInt(e.target.value))}
                 >
                     {Array.from({ length: 12 }, (_, i) => (
                         <option key={i + 1} value={i + 1}>
@@ -150,7 +172,7 @@ const WorkLogs = () => {
                 <select
                     className="input-field max-w-[120px]"
                     value={filterYear}
-                    onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterYear(parseInt(e.target.value))}
                 >
                     {getBSYearOptions().map(y => (
                         <option key={y} value={y}>{y}</option>
@@ -159,10 +181,10 @@ const WorkLogs = () => {
                 <select
                     className="input-field max-w-[150px]"
                     value={filterRoomId}
-                    onChange={(e) => setFilterRoomId(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilterRoomId(e.target.value)}
                 >
                     <option value="">All Rooms</option>
-                    {rooms.map(room => (
+                    {rooms.map((room: Room) => (
                         <option key={room.id} value={room.id}>{room.name}</option>
                     ))}
                 </select>
@@ -175,7 +197,7 @@ const WorkLogs = () => {
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {logs.map((log) => (
+                    {logs.map((log: WorkLog) => (
                         <div key={log.id} className="card hover:shadow-md transition-shadow">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-start gap-4">
@@ -250,7 +272,7 @@ const WorkLogs = () => {
                                     required
                                 >
                                     <option value="">Choose a room...</option>
-                                    {rooms.map(room => (
+                                    {rooms.map((room: Room) => (
                                         <option key={room.id} value={room.id}>{room.name}</option>
                                     ))}
                                 </select>
@@ -287,7 +309,7 @@ const WorkLogs = () => {
                                     className="input-field"
                                     placeholder="Value of the work done"
                                     value={workAmount}
-                                    onChange={e => setWorkAmount(e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWorkAmount(e.target.value)}
                                     required
                                 />
                             </div>
@@ -298,7 +320,7 @@ const WorkLogs = () => {
                                     className="input-field min-h-[100px]"
                                     placeholder="e.g. Fixed plumbing, Painted gate, Cleaned yard..."
                                     value={workDescription}
-                                    onChange={e => setWorkDescription(e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setWorkDescription(e.target.value)}
                                     required
                                 />
                             </div>
